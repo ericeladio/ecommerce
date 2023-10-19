@@ -25,3 +25,32 @@ async def very_token(token: str):
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+
+async def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+async def authenticate_user(user_name: str, password: str):
+    user = await User.get(user_name=user_name)
+
+    if user and verify_password(password, user.password):
+        return user
+    return False
+
+
+async def token_generator(user_name: str, password: str):
+    user = await authenticate_user(user_name, password)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_data = {"id": user.id, "user_name": user.user_name}
+
+    token = jwt.encode(token_data, config_credentials["SECRET"], algorithm="HS256")
+
+    return token

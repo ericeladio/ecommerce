@@ -1,7 +1,10 @@
-from fastapi import FastAPI, Request, HTTPException, status
+from fastapi import FastAPI, Request, HTTPException, status, Depends
 from tortoise.contrib.fastapi import register_tortoise
 from models import *
-from authentication import get_hashed_password, very_token
+
+# authentication
+from authentication import *
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
 # signals
 from tortoise.signals import post_save
@@ -17,6 +20,41 @@ from fastapi.templating import Jinja2Templates
 
 
 app = FastAPI()
+
+oath2_schema = OAuth2PasswordBearer(tokenUrl="token")
+
+
+@app.post("/token")
+async def generate_token(request_form: OAuth2PasswordRequestForm = Depends()):
+    token = await token_generator(request_form.username, request_form.password)
+    return {"access_token": token, "token_type": "bearer"}
+
+
+async def get_current_user(token: str = Depends(oath2_schema)):
+    try:
+        payload = jwt.decode(token, config_credentials["SECRET"], algorithms=["HS256"])
+        user = await User.get(id=payload.get("id"))
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return await user
+
+
+@app.post("/user/me")
+async def user_login(user: user_pydanticIn = Depends(get_current_user)):
+    business = await Business.get(owner=user)
+    return {
+        "status": "ok",
+        "data": {
+            "user_name": user.user_name,
+            "email": user.email,
+            "verified": user.is_verified,
+            "joined_date": user.join_date.strftime("%Y-%m-%d %H:%M:%S"),
+        },
+    }
 
 
 # a signals
