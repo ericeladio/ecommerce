@@ -16,7 +16,6 @@ from dotenv import dotenv_values
 from models import User
 
 config_credentials = dotenv_values(".env")
-print(">>>>>>email", config_credentials["EMAIL"])
 
 conf = ConnectionConfig(
     MAIL_USERNAME=config_credentials["EMAIL"],
@@ -59,7 +58,6 @@ async def send_email(email: List, instance: User):
             </body>
             </head>
         </html>
-    
     """
 
     message = MessageSchema(
