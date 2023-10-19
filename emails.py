@@ -16,7 +16,6 @@ from dotenv import dotenv_values
 from models import User
 
 config_credentials = dotenv_values(".env")
-print(">>>>>>email", config_credentials["EMAIL"])
 
 conf = ConnectionConfig(
     MAIL_USERNAME=config_credentials["EMAIL"],
@@ -45,12 +44,12 @@ async def send_email(email: List, instance: User):
         <html>
             <head>
             <body>
-                <div style = "display: flex; align-items: center; justify-content: center flex-direction: column">
+                <div style = "display: flex; align-items: center; justify-content: center; flex-direction: column;">
                     <h3>Account Verification</h3>
                     <br>
                     <p>Thank you for registering with us, please click on the link below to verify your account</p>
                     <a style="margin-top:1rem; padding: 1rem; border-radius: 0.5rem;
-                    background-color: #0275d8; text-decoration: none font-size: 1rem; color: white;"
+                    background-color: #0275d8; text-decoration: none; font-size: 1rem; color: white;"
                     href="http://localhost:8000/verification/?token={token}">
                         Verify your email
                     </a>
@@ -59,7 +58,6 @@ async def send_email(email: List, instance: User):
             </body>
             </head>
         </html>
-    
     """
 
     message = MessageSchema(
