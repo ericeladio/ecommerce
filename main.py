@@ -18,10 +18,19 @@ from fastapi.responses import HTMLResponse
 # templates
 from fastapi.templating import Jinja2Templates
 
+# images Upload
+from fastapi import File, UploadFile
+import secrets
+from fastapi.staticfiles import StaticFiles
+from PIL import Image
+
 
 app = FastAPI()
 
 oath2_schema = OAuth2PasswordBearer(tokenUrl="token")
+
+# static files  setup config
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.post("/token")
@@ -111,6 +120,94 @@ async def email_verification(resquest: Request, token: str):
 @app.get("/")
 def index():
     return {"message": "Hello World"}
+
+
+@app.post("/uploadfile/profile")
+async def create_upload_file(
+    file: UploadFile = File(...), user: user_pydantic = Depends(get_current_user)
+):
+    FILEPATH = "./static/images"
+    file_name = file.filename
+    extension = file_name.split(".")[1]
+
+    if extension not in ["png", "jpg"]:
+        return {"status": "eror", "detail": "invalid file extension"}
+
+    token_name = secrets.token_hex(10) + "." + extension
+    generated_name = FILEPATH + token_name
+    file_content = await file.read()
+
+    with open(generated_name, "wb") as file:
+        file.write(file_content)
+
+    img = Image.open(generated_name)
+    img = img.resize((200, 200))
+    img.save(generated_name)
+
+    file.close()
+
+    business = await Business.get(owner=user)
+    owner = await business.owner
+
+    if owner == user:
+        business.logo = token_name
+        await business.save()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    file_url = "localhost:8000" + generated_name[1:]
+    return {"status": "ok", "filename": file_url}
+
+
+@app.post("/uploadfile/product/{id}")
+# check for product owner before making the changes.
+async def create_upload_file(
+    id: int,
+    file: UploadFile = File(...),
+    user: user_pydantic = Depends(get_current_user),
+):
+    FILEPATH = "./static/images/"
+    filename = file.file_name
+    extension = filename.split(".")[1]
+
+    if extension not in ["png", "jpg"]:
+        return {"status": "eror", "detail": "invalid file extension"}
+
+    token_name = secrets.token_hex(10) + "." + extension
+    generated_name = FILEPATH + token_name
+    file_content = await file.read()
+
+    with open(generated_name, "wb") as file:
+        file.write(file_content)
+
+    # pillow
+    img = Image.open(generated_name)
+    img = img.resize(size=(200, 200))
+    img.save(generated_name)
+
+    file.close()
+
+    # get product details
+    product = await Product.get(id=id)
+    business = await product.business
+    owner = await business.owner
+
+    # check if the user making the request is authenticated
+    if owner == user:
+        product.product_image = token_name
+        await product.save()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    file_url = "localhost:8000" + generated_name[1:]
+    return {"status": "ok", "filename": file_url}
 
 
 register_tortoise(

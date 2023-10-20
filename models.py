@@ -23,7 +23,7 @@ class Business(Model):
     owner = fields.ForeignKeyField("models.User", related_name="businesses")
 
 
-class product(Model):
+class Product(Model):
     id = fields.IntField(pk=True, index=True)
     name = fields.CharField(max_length=100, null=False, index=True)
     category = fields.CharField(max_length=30, index=True)
@@ -48,7 +48,7 @@ business_pydanticIn = pydantic_model_creator(
     Business, name="BusinessIn", exclude_readonly=True
 )
 
-product_pydantic = pydantic_model_creator(product, name="Product")
+product_pydantic = pydantic_model_creator(Product, name="Product")
 product_pydanticIn = pydantic_model_creator(
-    product, name="ProductIn", exclude=("percentage_discount",)
+    Product, name="ProductIn", exclude=("percentage_discount",)
 )
